@@ -72,7 +72,7 @@ export default function ReaderDashboard() {
                 <td>{session['sitter-name']}</td>
                 <td>{session['created-at']}</td>
                 <td>
-                  <div className="dropdown-container">
+                  <div>
                     <select
                         onChange={(e) => handleSessionChange(session.session_id, e.target.value)}
                         defaultValue=""

@@ -133,7 +133,7 @@ export default function Admin() {
                 <td>{session['location']}</td>
                 <td>{session['created-at']}</td>
                 <td>
-                  <div className="dropdown-container">
+                  <div>
                     <select
                         onChange={(e) => handleSessionChange(session.session_id, e.target.value)}
                         defaultValue=""
@@ -179,7 +179,7 @@ export default function Admin() {
                 <td>{reader.bio}</td>
                 <td>{reader.location}</td>
                 <td>
-                  <div className="dropdown-container">
+                  <div>
                     <select
                         onChange={(e) => handleReaderChange(reader.reader_id, e.target.value)}
                         defaultValue=""
