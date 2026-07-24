@@ -37,7 +37,8 @@ export default function ReaderDashboard() {
     if (newStatus) {
       updateSessionStatus(sessionId, newStatus)
         .then((data) => {
-          setSessions(data.session_data)
+          const readerSessionData = data.session_data.filter((obj) => obj['reader-id'] == reader_id)
+          setSessions(readerSessionData)
         })
         .catch((err) => {
           setError(err.message);
@@ -68,8 +69,8 @@ export default function ReaderDashboard() {
             {sessions.map((session) => (
               <tr key={session.session_id}>
                 <td>{session['status']}</td>
-                <td>{session['name']}</td>
-                <td>{session['created_at']}</td>
+                <td>{session['sitter-name']}</td>
+                <td>{session['created-at']}</td>
                 <td>
                   <div className="dropdown-container">
                     <select
