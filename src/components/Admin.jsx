@@ -103,129 +103,229 @@ export default function Admin() {
   if (error) return <div>Error: {error}</div>;
 
   return (
+<div className="min-h-screen bg-base-200 text-base-content p-6 lg:p-8 space-y-8 font-sans">
+  
+  {/* Admin Header */}
+  <header className="flex items-center justify-between border-b border-base-300 pb-5">
     <div>
-      <h1>Admin Panel</h1>
-      <h2>Sessions</h2>
+      <h1 className="text-3xl font-black tracking-tight text-primary">Admin Panel</h1>
+      <p className="text-sm text-base-content/70 mt-0.5">Manage active sessions, readers, and client rosters</p>
+    </div>
+  </header>
+
+  {/* ================= SESSIONS SECTION ================= */}
+  <section className="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+    <div className="card-body p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="card-title text-xl font-bold">Sessions</h2>
+          {!isLoading && data?.sessions && (
+            <span className="badge badge-neutral badge-sm font-semibold">
+              {data.sessions.length}
+            </span>
+          )}
+        </div>
+      </div>
 
       {isLoading ? (
-        <p>Loading Sessions...</p>
+        <div className="flex items-center gap-3 py-8 text-base-content/70 justify-center">
+          <span className="loading loading-spinner loading-md text-primary"></span>
+          <span className="font-medium">Loading Sessions...</span>
+        </div>
       ) : (
-        <>
-        <table>
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>Reader</th>
-              <th>Client</th>
-              <th>Session Type</th>
-              <th>Location</th>
-              <th>Created</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.sessions.map((session) => (
-              <tr key={session.session_id}>
-                <td>{session['status']}</td>
-                <td>{session['reader-name']}</td>
-                <td>{session['sitter-name']}</td>
-                <td>{session['session-type']}</td>
-                <td>{session['location']}</td>
-                <td>{session['created-at']}</td>
-                <td>
-                  <div>
-                    <select
+        <div className="overflow-x-auto">
+          <table className="table table-sm w-full">
+            <thead className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider">
+              <tr>
+                <th>Status</th>
+                <th>Reader</th>
+                <th>Client</th>
+                <th>Session Type</th>
+                <th>Location</th>
+                <th>Created</th>
+                <th className="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-base-200/60 font-medium">
+              {data.sessions.map((session) => {
+                const statusLower = String(session['status']).toLowerCase();
+                let badgeClass = "badge-neutral";
+                if (statusLower.includes("in progress") || statusLower.includes("active")) {
+                  badgeClass = "badge-success";
+                } else if (statusLower.includes("waiting") || statusLower.includes("pending")) {
+                  badgeClass = "badge-warning";
+                } else if (statusLower.includes("completed") || statusLower.includes("done")) {
+                  badgeClass = "badge-info";
+                }
+
+                return (
+                  <tr key={session.session_id} className="hover:bg-base-200/30 transition-colors">
+                    <td>
+                      <span className={`badge ${badgeClass} badge-xs font-bold px-2 py-2 uppercase tracking-wider`}>
+                        {session['status']}
+                      </span>
+                    </td>
+                    <td className="font-semibold text-base-content">{session['reader-name']}</td>
+                    <td>{session['sitter-name']}</td>
+                    <td>
+                      <span className="bg-base-200 text-xs px-2 py-1 rounded font-medium border border-base-300">
+                        {session['session-type']}
+                      </span>
+                    </td>
+                    <td className="text-base-content/80">{session['location']}</td>
+                    <td className="font-mono text-xs text-base-content/60">{session['created-at']}</td>
+                    <td className="text-right">
+                      <select
+                        className="select select-bordered select-xs w-full max-w-[170px] bg-base-100 focus:select-primary"
                         onChange={(e) => handleSessionChange(session.session_id, e.target.value)}
                         defaultValue=""
-                        value = ""
-                    >
-                      <option value="" disabled>
-                        Select an option
-                      </option>
-                      <option value="start-session">Start Session</option>
-                      <option value="end-session">Mark Session Complete</option>
-                      <option value="reset-session">Reset Session</option>
-                    </select>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </>
+                        value=""
+                      >
+                        <option value="" disabled>Actions...</option>
+                        <option value="start-session">Start Session</option>
+                        <option value="end-session">Mark Complete</option>
+                        <option value="reset-session">Reset Session</option>
+                      </select>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       )}
+    </div>
+  </section>
 
-      <h2>Readers</h2>
-      <button onClick={()=>{navigate('/create-reader')}}>Create Reader</button>
+  {/* ================= READERS SECTION ================= */}
+  <section className="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+    <div className="card-body p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="card-title text-xl font-bold">Readers</h2>
+          {!isLoading && data?.readers && (
+            <span className="badge badge-neutral badge-sm font-semibold">
+              {data.readers.length}
+            </span>
+          )}
+        </div>
+        <button 
+          onClick={() => navigate('/create-reader')}
+          className="btn btn-primary btn-sm gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+          Create Reader
+        </button>
+      </div>
+
       {isLoading ? (
-        <p>Loading Readers...</p>
+        <div className="flex items-center gap-3 py-8 text-base-content/70 justify-center">
+          <span className="loading loading-spinner loading-md text-primary"></span>
+          <span className="font-medium">Loading Readers...</span>
+        </div>
       ) : (
-        <>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Offering</th>
-              <th>Bio</th>
-              <th>Location</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.readers.map((reader) => (
-              <tr key={reader.reader_id}>
-                <td>{reader.name}</td>
-                <td>{reader.offering}</td>
-                <td>{reader.bio}</td>
-                <td>{reader.location}</td>
-                <td>
-                  <div>
+        <div className="overflow-x-auto">
+          <table className="table table-sm w-full">
+            <thead className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider">
+              <tr>
+                <th>Name</th>
+                <th>Offering</th>
+                <th>Bio</th>
+                <th>Location</th>
+                <th className="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-base-200/60 font-medium">
+              {data.readers.map((reader) => (
+                <tr key={reader.reader_id} className="hover:bg-base-200/30 transition-colors">
+                  <td className="font-bold text-base-content">{reader.name}</td>
+                  <td>
+                    <span className="badge badge-outline badge-sm font-medium">
+                      {reader.offering}
+                    </span>
+                  </td>
+                  <td className="max-w-xs">
+                    <p className="line-clamp-1 text-xs text-base-content/70" title={reader.bio}>
+                      {reader.bio}
+                    </p>
+                  </td>
+                  <td className="text-base-content/80">{reader.location}</td>
+                  <td className="text-right">
                     <select
-                        onChange={(e) => handleReaderChange(reader.reader_id, e.target.value)}
-                        defaultValue=""
+                      className="select select-bordered select-xs w-full max-w-[150px] bg-base-100 focus:select-primary"
+                      onChange={(e) => handleReaderChange(reader.reader_id, e.target.value)}
+                      defaultValue=""
                     >
-                      <option value="" disabled>
-                        Select an option
-                      </option>
+                      <option value="" disabled>Actions...</option>
                       <option value="edit-reader">Edit Reader</option>
                       <option value="delete-reader">Delete Reader</option>
                     </select>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-    
-      <h2>Clients</h2>
-      <button onClick={()=>{navigate('/')}}>Create Client</button>
-      {isLoading ? (
-        <p>Loading Clients...</p>
-      ) : (
-        <>
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.sitters.map((sitter) => (
-              <tr key={sitter.sitter_id}>
-                <td>{sitter.name}</td>
-                <td>
-                  <button onClick={() => {handleDeleteClient(sitter.sitter_id)}}>Delete Sitter</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        </>
-      )}
-
     </div>
+  </section>
+
+  {/* ================= CLIENTS SECTION ================= */}
+  <section className="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
+    <div className="card-body p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-3">
+          <h2 className="card-title text-xl font-bold">Clients</h2>
+          {!isLoading && data?.sitters && (
+            <span className="badge badge-neutral badge-sm font-semibold">
+              {data.sitters.length}
+            </span>
+          )}
+        </div>
+        <button 
+          onClick={() => navigate('/')}
+          className="btn btn-secondary btn-sm gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"/></svg>
+          Create Client
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center gap-3 py-8 text-base-content/70 justify-center">
+          <span className="loading loading-spinner loading-md text-primary"></span>
+          <span className="font-medium">Loading Clients...</span>
+        </div>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="table table-sm w-full">
+            <thead className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider">
+              <tr>
+                <th>Client Name</th>
+                <th className="text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-base-200/60 font-medium">
+              {data.sitters.map((sitter) => (
+                <tr key={sitter.sitter_id} className="hover:bg-base-200/30 transition-colors">
+                  <td className="font-semibold text-base-content">{sitter.name}</td>
+                  <td className="text-right">
+                    <button 
+                      onClick={() => handleDeleteClient(sitter.sitter_id)}
+                      className="btn btn-ghost btn-xs text-error hover:bg-error/10"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  </section>
+
+</div>
   );
 }
