@@ -14,7 +14,6 @@ export default function ReaderDashboard() {
     // 1. Fetch sessions when component mounts
     getReaderDashboard(reader_id)
       .then((data) => {
-        console.log('data received from endpoint',data)
         setSessions(data.sessions);
         setReaderName(data['reader-name'])
       })
@@ -75,7 +74,7 @@ export default function ReaderDashboard() {
       </div>
 
       <div className="badge badge-primary badge-outline font-semibold px-3 py-2 self-start sm:self-auto text-xs">
-        {sessions.length} {sessions.length === 1 ? 'Session' : 'Sessions'}
+        {sessions.filter(session => session.status != 'Complete').length} {sessions.length === 1 ? 'Session' : 'Sessions'}
       </div>
     </header>
 
