@@ -95,7 +95,7 @@ export default function Dashboard() {
 
             {/* Table Body */}
             <tbody className="divide-y divide-base-200/60 text-lg font-medium">
-              {sessions.map((session) => {
+              {sessions.filter(session => session.status != 'Complete').map((session) => {
                 const statusLower = String(session['status']).toLowerCase();
                 let badgeClass = "badge-neutral";
 
