@@ -39,3 +39,10 @@ export function createReader(readerData) {
 export function getReaderDashboard(readerId) {
   return apiClient(`/reader?reader-id=${readerId}`)
 }
+
+export function uploadReaderData(fileData) {
+  return apiClient('/reader/upload-readers', {
+    method: 'POST',
+    body: fileData
+  })
+}

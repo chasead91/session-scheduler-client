@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getReaders, deleteReader } from '../api/readers';
+import { getReaders, deleteReader, uploadReaderData } from '../api/readers';
 import { getSessions } from '../api/sessions';
 import { getSitterData, deleteSitter } from '../api/sitters';
 import { updateSessionStatus } from '../api/sessions';
@@ -15,6 +15,11 @@ export default function Admin() {
   const [sessionSearchTerm, setSessionSearchTerm] = useState('');
   const [readerSearchTerm, setReaderSearchTerm] = useState('');
   const [sitterSearchTerm, setSitterSearchTerm] = useState('');
+
+  const [uploadingReaders, setUploadingReaders] = useState(false)
+  const [readerFile, setReaderFile] = useState(null)
+  const [isUploadingReaders, setIsUploadingReaders] = useState(false)
+  const [readerUploadStatus, setReaderUploadStatus] = useState();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -128,6 +133,45 @@ export default function Admin() {
       })
   }
 
+  const handleFileChange = (e) => {
+    if (e.target.files && e.target.files[0]) {
+      setReaderFile(e.target.files[0]);
+    }
+  };
+
+  const handleUpload = async (e) => {
+    e.preventDefault();
+    if (!readerFile) {
+      setReaderUploadStatus('Please select a file first.');
+      return;
+    }
+
+    setIsUploadingReaders(true);
+    setReaderUploadStatus('Uploading and processing...');
+
+    const formData = new FormData();
+    // 'file' key must match request.files['file'] in Flask
+    formData.append('file', readerFile);
+
+    try {
+      // uploadReaderData calls apiClient, which already returns the parsed JSON data (or throws if !response.ok)
+      const data = await uploadReaderData(formData);
+      setReaderUploadStatus(`Success: ${data.message}`);
+      setData((prevData) => ({
+        ...prevData,
+        readers: data.readerData
+      }))
+      const timer = setTimeout(() => {
+        setReaderUploadStatus("")
+      }, 4000)
+      setReaderFile(null);
+    } catch (err) {
+      setReaderUploadStatus(`Upload failed: ${err.message}`);
+    } finally {
+      setIsUploadingReaders(false);
+    }
+
+  };
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -162,8 +206,8 @@ export default function Admin() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <input 
-                type='text' 
+              <input
+                type='text'
                 placeholder='Search by Status, Reader, Client, or Location...'
                 value={sessionSearchTerm}
                 onChange={(e) => setSessionSearchTerm(e.target.value)}
@@ -244,13 +288,24 @@ export default function Admin() {
                 </span>
               )}
             </div>
-            <button
-              onClick={() => navigate('/create-reader')}
-              className="btn btn-primary btn-sm gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
-              Create Reader
-            </button>
+            <div className='flex flex-col gap-2'>
+              <div className='flex gap-2'>
+                <button
+                  onClick={() => navigate('/create-reader')}
+                  className="btn btn-primary btn-sm gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                  Create Reader
+                </button>
+                <button
+                  onClick={() => setUploadingReaders(!uploadingReaders)}
+                  className="btn btn-primary btn-sm gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                  Upload Readers
+                </button>
+              </div>
+            </div>
           </div>
 
           {isLoading ? (
@@ -260,13 +315,35 @@ export default function Admin() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <input 
-                type='text' 
-                placeholder='Reader Name...'
-                value={readerSearchTerm}
-                onChange={(e) => setReaderSearchTerm(e.target.value)}
-                className='input mb-8'
-              />
+              <div className='flex justify-between items-center mb-8 p-2'>
+                <input
+                  type='text'
+                  placeholder='Reader Name...'
+                  value={readerSearchTerm}
+                  onChange={(e) => setReaderSearchTerm(e.target.value)}
+                  className='input'
+                />
+                {uploadingReaders &&
+                  <div>
+                    <form onSubmit={handleUpload} className='flex gap-2 items-center'>
+                      <input
+                        type='file'
+                        className='input'
+                        accept='.csv'
+                        onChange={(e) => handleFileChange(e)}
+                      />
+                      <button
+                        type="submit"
+                        className='btn btn-primary btn-sm'
+                        disabled={!readerFile || isUploadingReaders}
+                      >
+                        {isUploadingReaders ? 'Uploading...' : 'Upload'}
+                      </button>
+                    </form>
+                    {readerUploadStatus && <p className='text-xs italic mt-2'>{readerUploadStatus}</p>}
+                  </div>
+                }
+              </div>
               <table className="table table-sm w-full">
                 <thead className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider">
                   <tr>
@@ -340,8 +417,8 @@ export default function Admin() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <input 
-                type='text' 
+              <input
+                type='text'
                 placeholder='Client Name...'
                 value={sitterSearchTerm}
                 onChange={(e) => setSitterSearchTerm(e.target.value)}
