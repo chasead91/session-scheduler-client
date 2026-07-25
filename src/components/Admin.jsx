@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getReaders, deleteReader, uploadReaderData } from '../api/readers';
 import { getSessions } from '../api/sessions';
 import { getSitterData, deleteSitter } from '../api/sitters';
@@ -21,20 +21,18 @@ export default function Admin() {
   const [isUploadingReaders, setIsUploadingReaders] = useState(false)
   const [readerUploadStatus, setReaderUploadStatus] = useState();
 
-  useEffect(() => {
-    const controller = new AbortController();
+  const fetchData = useCallback((signal) => {
+    setIsLoading(true);
 
-    // Fetch all resources concurrently
     Promise.all([
-      getReaders({ signal: controller.signal }),
-      getSitterData({ signal: controller.signal }),
-      getSessions({ signal: controller.signal }),
+      getReaders({ signal }),
+      getSitterData({ signal }),
+      getSessions({ signal }),
     ])
       .then(([readers, sitters, sessions]) => {
         setData({ readers, sitters, sessions });
       })
       .catch((err) => {
-        // Ignore errors caused by unmounting / aborted requests
         if (err.name !== 'AbortError') {
           setError(err.message);
         }
@@ -42,10 +40,14 @@ export default function Admin() {
       .finally(() => {
         setIsLoading(false);
       });
-
-    // Cleanup: cancel requests if component unmounts
-    return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchData(controller.signal);
+
+    return () => controller.abort();
+  }, [fetchData]);
 
   const filteredSessionData = data.sessions.filter((session) => {
     const term = sessionSearchTerm.toLowerCase();
@@ -71,7 +73,7 @@ export default function Admin() {
     )
   })
 
-  const handleSessionChange = (sessionId, sessionAction) => {
+  const handleSessionChange = async (sessionId, sessionAction) => {
     const statusMap = {
       'start-session': 'In Progress',
       'end-session': 'Complete',
@@ -79,58 +81,49 @@ export default function Admin() {
     };
 
     const newStatus = statusMap[sessionAction];
-    if (newStatus) {
-      updateSessionStatus(sessionId, newStatus)
-        .then((data) => {
-          setData((prevData) => ({
-            ...prevData,
-            sessions: data.session_data,
-          }))
-        })
-        .catch((err) => {
-          setError(err.message);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
+    if (!newStatus) return;
+
+    try {
+      setIsLoading(true);
+      await updateSessionStatus(sessionId, newStatus);
+      // Trigger a full refresh across all endpoints
+      fetchData();
+    } catch (err) {
+      setError(err.message);
+      setIsLoading(false);
     }
   };
 
-  const handleReaderChange = (record_id, changeType) => {
+  const handleReaderChange = async (record_id, changeType) => {
 
     if (changeType == "edit-reader") {
       navigate(`/edit-reader/${record_id}`)
     } else if (changeType == "delete-reader") {
-      deleteReader(record_id)
-        .then((data) => {
-          setData((prevData) => ({
-            ...prevData,
-            readers: data.readerData
-          }))
-        })
-        .catch((err) => {
-          setError(err.message)
-        })
-        .finally(() => {
-          setIsLoading(false)
-        })
+      try {
+        setIsLoading(true);
+        await deleteReader(record_id);
+        // Trigger a full refresh across all endpoints
+        fetchData();
+      } catch (err) {
+        setError(err.message);
+        setIsLoading(false);
+      }
     }
   }
 
-  const handleDeleteClient = (sitterId) => {
-    deleteSitter(sitterId)
-      .then((data) => {
-        setData((prevData) => ({
-          ...prevData,
-          sitters: data.sitterData
-        }))
-      })
-      .catch((err) => {
-        setError(err.message)
-      })
-      .finally(() => {
-        setIsLoading(false)
-      })
+  const handleDeleteClient = async (sitterId) => {
+    const confirmed = window.confirm('Are you sure you want to delete this client?')
+    if (confirmed) {
+      try {
+        setIsLoading(true);
+        await deleteSitter(sitterId);
+        // Trigger a full refresh across all endpoints
+        fetchData();
+      } catch (err) {
+        setError(err.message);
+        setIsLoading(false);
+      }
+    }
   }
 
   const handleFileChange = (e) => {
@@ -172,6 +165,19 @@ export default function Admin() {
     }
 
   };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return '';
+
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: 'UTC' // Uncomment this if you want to keep UTC time instead of local time
+    });
+  };
+
   if (error) return <div>Error: {error}</div>;
 
   return (
@@ -198,6 +204,16 @@ export default function Admin() {
               )}
             </div>
           </div>
+          <div>
+
+            <input
+              type='text'
+              placeholder='Search by Status, Reader, Client, or Location...'
+              value={sessionSearchTerm}
+              onChange={(e) => setSessionSearchTerm(e.target.value)}
+              className='input mb-8'
+            />
+          </div>
 
           {isLoading ? (
             <div className="flex items-center gap-3 py-8 text-base-content/70 justify-center">
@@ -205,14 +221,7 @@ export default function Admin() {
               <span className="font-medium">Loading Sessions...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <input
-                type='text'
-                placeholder='Search by Status, Reader, Client, or Location...'
-                value={sessionSearchTerm}
-                onChange={(e) => setSessionSearchTerm(e.target.value)}
-                className='input mb-8'
-              />
+            <div className="h-80 overflow-x-auto mb-8">
               <table className="table table-sm w-full">
                 <thead className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider">
                   <tr>
@@ -252,11 +261,24 @@ export default function Admin() {
                           </span>
                         </td>
                         <td className="text-base-content/80">{session['location']}</td>
-                        <td className="font-mono text-xs text-base-content/60">{session['created-at']}</td>
+                        <td className="font-mono text-xs text-base-content/60">{formatTime(session['created-at'])}</td>
                         <td className="text-right">
                           <select
                             className="select select-bordered select-xs w-full max-w-[170px] bg-base-100 focus:select-primary"
-                            onChange={(e) => handleSessionChange(session.session_id, e.target.value)}
+                            onChange={(e) => {
+                              const action = e.target.value;
+                              if (!action) return;
+
+                              const actionText = e.target.options[e.target.selectedIndex].text;
+                              const confirmed = window.confirm(`Are you sure you want to ${actionText}?`);
+
+                              if (confirmed) {
+                                handleSessionChange(session.session_id, action);
+                              }
+
+                              // Reset dropdown back to default placeholder state
+                              e.target.value = "";
+                            }}
                             defaultValue=""
                             value=""
                           >
@@ -307,6 +329,15 @@ export default function Admin() {
               </div>
             </div>
           </div>
+          <div>
+            <input
+              type='text'
+              placeholder='Reader Name...'
+              value={readerSearchTerm}
+              onChange={(e) => setReaderSearchTerm(e.target.value)}
+              className='input'
+            />
+          </div>
 
           {isLoading ? (
             <div className="flex items-center gap-3 py-8 text-base-content/70 justify-center">
@@ -314,15 +345,8 @@ export default function Admin() {
               <span className="font-medium">Loading Readers...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <div className='flex justify-between items-center mb-8 p-2'>
-                <input
-                  type='text'
-                  placeholder='Reader Name...'
-                  value={readerSearchTerm}
-                  onChange={(e) => setReaderSearchTerm(e.target.value)}
-                  className='input'
-                />
+            <div className="h-80 overflow-x-auto">
+              <div className='flex justify-end items-center mb-8 p-2'>
                 {uploadingReaders &&
                   <div>
                     <form onSubmit={handleUpload} className='flex gap-2 items-center'>
@@ -372,7 +396,20 @@ export default function Admin() {
                       <td className="text-right">
                         <select
                           className="select select-bordered select-xs w-full max-w-[150px] bg-base-100 focus:select-primary"
-                          onChange={(e) => handleReaderChange(reader.reader_id, e.target.value)}
+                          onChange={(e) => {
+                            const action = e.target.value;
+                            if (!action) return;
+
+                            const actionText = e.target.options[e.target.selectedIndex].text;
+                            const confirmed = window.confirm(`Are you sure you want to ${actionText}?`);
+
+                            if (confirmed) {
+                              handleReaderChange(reader.reader_id, e.target.value);
+                            }
+
+                            // Reset dropdown back to default placeholder state
+                            e.target.value = "";
+                          }}
                           defaultValue=""
                         >
                           <option value="" disabled>Actions...</option>
@@ -409,6 +446,15 @@ export default function Admin() {
               Create Client
             </button>
           </div>
+          <div>
+            <input
+              type='text'
+              placeholder='Client Name...'
+              value={sitterSearchTerm}
+              onChange={(e) => setSitterSearchTerm(e.target.value)}
+              className='input mb-8'
+            />
+          </div>
 
           {isLoading ? (
             <div className="flex items-center gap-3 py-8 text-base-content/70 justify-center">
@@ -416,14 +462,7 @@ export default function Admin() {
               <span className="font-medium">Loading Clients...</span>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <input
-                type='text'
-                placeholder='Client Name...'
-                value={sitterSearchTerm}
-                onChange={(e) => setSitterSearchTerm(e.target.value)}
-                className='input mb-8'
-              />
+            <div className="h-80 overflow-x-auto">
               <table className="table table-sm w-full">
                 <thead className="bg-base-200/60 text-base-content/70 text-xs uppercase tracking-wider">
                   <tr>
