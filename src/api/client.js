@@ -1,5 +1,5 @@
 // api/client.js
-const BASE_URL = 'http://127.0.0.1:5000';
+const BASE_URL = 'http://192.168.1.192:5000';
 
 export async function apiClient(endpoint, { body, headers: customHeaders, ...customConfig } = {}) {
   const token = localStorage.getItem('token');
