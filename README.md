@@ -6,3 +6,10 @@ Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
 - [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+Serve with nginx
+Site Config file at /etc/nginx/sites-available/session-app
+ln -s /etc/nginx/sites-available/session-app /etc/nginx/sites-enabled (create sym link to enable website)
+sudo systemctl restart nginx
+sudo systemctl start nginx
+sudo systemctl status nginx.service

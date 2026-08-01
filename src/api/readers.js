@@ -1,15 +1,15 @@
 import { apiClient } from './client';
 
 export function getReaders() {
-  return apiClient(`/reader/manage-readers`);
+  return apiClient(`/api/reader/manage-readers`);
 }
 
 export function getReader(readerId) {
-  return apiClient(`/reader/manage-readers?reader_id=${readerId}`)
+  return apiClient(`/api/reader/manage-readers?reader_id=${readerId}`)
 }
 
 export function editReader(readerId, readerData) {
-  return apiClient('/reader/manage-readers', {
+  return apiClient('/api/reader/manage-readers', {
     method: 'PATCH',
     body: {
       "reader-id": readerId,
@@ -19,7 +19,7 @@ export function editReader(readerId, readerData) {
 }
 
 export function deleteReader(readerId) {
-  return apiClient('/reader/manage-readers', {
+  return apiClient('/api/reader/manage-readers', {
     method: 'DELETE',
     body: {
       "reader-id": readerId,
@@ -28,7 +28,7 @@ export function deleteReader(readerId) {
 }
 
 export function createReader(readerData) {
-  return apiClient('/reader/manage-readers', {
+  return apiClient('/api/reader/manage-readers', {
     method: 'POST',
     body: {
       ...readerData
@@ -37,11 +37,11 @@ export function createReader(readerData) {
 }
 
 export function getReaderDashboard(readerId) {
-  return apiClient(`/reader?reader-id=${readerId}`)
+  return apiClient(`/api/reader?reader-id=${readerId}`)
 }
 
 export function uploadReaderData(fileData) {
-  return apiClient('/reader/upload-readers', {
+  return apiClient('/api/reader/upload-readers', {
     method: 'POST',
     body: fileData
   })
